@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ESP TOUR 2.0</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-material-ui/material-ui.min.css" rel="stylesheet">
+
+<!-- Firebase Compat SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+<style>
+    :root {
+        --primary: #3F51B5;
+        --primary-light: #E8EAF6;
+        --secondary: #ff9800;
+        --success: #43A047;
+        --danger: #D32F2F;
+        --bg-color: #f5f6fa;
+        --text-dark: #1d1b20;
+        --white: #ffffff;
+        --wallet-gradient: linear-gradient(135deg, #2b1055, #7597de);
+        --bkash-color: #E2136E;
+        --nagad-color: #F7941D;
+        --bkash-dark: #b00e56; 
+        --nagad-dark: #c97612;
+        --auth-bg-dark: #101010;
+        --auth-card-bg: #ffffff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', 'Hind Siliguri', sans-serif; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; }
+    input, textarea, select { user-select: text; }
+
+    body { background-color: var(--bg-color); padding-bottom: 90px; overflow-x: hidden; min-height: 100vh; }
+
+    #app-splash {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #000000; z-index: 10000; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; color: white; transition: opacity 0.5s ease-out; overflow: hidden;
+    }
+
+    .firefly-container { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; }
+    .firefly { position: absolute; bottom: -10px; left: var(--left); width: 4px; height: 4px; background: var(--color); border-radius: 50%; box-shadow: 0 0 10px var(--color); opacity: 0; animation: floatUp var(--time) infinite linear var(--delay); }
+    @keyframes floatUp { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-110vh); opacity: 0; } }
+
+    .animated-logo-box {
+        position: relative; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 2; margin-bottom: 20px;
+    }
+    .animated-logo-box::before {
+        content: ''; position: absolute; width: 150%; height: 150%;
+        background: conic-gradient(transparent, transparent, transparent, #ff0000); animation: rotateBorder 2s linear infinite;
+    }
+    @keyframes rotateBorder { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .logo-inner { position: absolute; inset: 3px; background: #000; border-radius: 18px; display: flex; align-items: center; justify-content: center; z-index: 3; padding: 8px; }
+    .logo-inner img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+
+    .splash-app-name { font-size: 24px; font-weight: 400; margin-bottom: 5px; z-index: 5; }
+    .splash-version { font-size: 14px; color: #888; margin-bottom: 20px; z-index: 5; }
+
+    .splash-bottom-area { position: absolute; bottom: 50px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 5; }
+    .splash-welcome { font-size: 14px; font-weight: 300; margin-bottom: 10px; opacity: 0.8; }
+    .splash-line { width: 150px; height: 3px; background: #4CAF50; border-radius: 2px; margin-bottom: 15px; animation: lineExpand 1.5s ease-in-out infinite alternate; }
+    @keyframes lineExpand { 0% { width: 50px; opacity: 0.5; } 100% { width: 150px; opacity: 1; } }
+    .splash-dots-container { display: flex; gap: 5px; }
+    .splash-dot { width: 8px; height: 8px; background: #555; border-radius: 50%; animation: dotBounce 1.4s infinite ease-in-out both; }
+    .splash-dot:nth-child(1) { animation-delay: -0.32s; }
+    .splash-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; background: #888; } }
+
+    #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: none; justify-content: center; align-items: center; }
+    #global-loader.active { display: flex; }
+    .spinner { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.3); border-top: 5px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #auth-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--auth-bg-dark); z-index: 5000; display: none; flex-direction: column; overflow-y: auto; }
+    #auth-view.active { display: flex; }
+    .auth-top-section { height: 35vh; width: 100%; background-color: var(--auth-bg-dark); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 20px; text-align: center; }
+    .auth-title-large { font-size: 28px; font-weight: 800; margin-bottom: 5px; }
+    .auth-subtitle { font-size: 14px; color: #aaa; }
+    .auth-bottom-card { background-color: white; min-height: 65vh; width: 100%; border-top-left-radius: 30px; border-top-right-radius: 30px; padding: 30px 25px; display: flex; flex-direction: column; position: relative; }
+    .auth-card-title { font-size: 24px; font-weight: 800; text-align: center; color: #444; margin-bottom: 25px; }
+    .auth-input-group { margin-bottom: 15px; position: relative; }
+    .auth-input-field { width: 100%; padding: 15px; border: 1.5px solid #e0e0e0; border-radius: 12px; font-size: 14px; outline: none; color: #333; transition: all 0.25s; }
+    .auth-input-field:focus { border-color: #ff416c; box-shadow: 0 0 0 3px rgba(255, 65, 108, 0.15); }
+    .auth-input-field.input-error { border-color: #ff3838; background-color: #fff8f8; animation: shakeInput 0.35s ease-in-out; }
+    @keyframes shakeInput {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-6px); }
+        40%, 80% { transform: translateX(6px); }
+    }
+    .auth-field-error-msg {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        color: #e53935;
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 6px;
+        padding-left: 4px;
+        animation: fadeIn 0.2s ease-in-out;
+    }
+    .auth-field-error-msg.show { display: flex; }
+    .auth-password-eye { position: absolute; right: 15px; top: 23px; color: #777; cursor: pointer; }
+    .auth-checkbox-row { display: flex; align-items: center; gap: 10px; margin: 10px 0 20px; font-size: 12px; color: #555; }
+    .auth-black-btn { width: 100%; background-color: #1a1a1a; color: white; padding: 16px; border-radius: 30px; border: none; font-size: 16px; font-weight: 800; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; }
+    .auth-divider { text-align: center; margin: 10px 0; color: #888; font-size: 13px; font-weight: bold; position: relative; }
+    .auth-google-btn { width: 100%; background-color: #ffffff; color: #333; border: 1.5px solid #e0e0e0; padding: 14px; border-radius: 30px; font-size: 15px; font-weight: 800; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: all 0.2s ease; }
+    .auth-google-btn:active { background-color: #f5f5f5; border-color: #ccc; }
+    .auth-google-btn img { width: 22px; height: 22px; }
+    .auth-footer-link { text-align: center; font-size: 13px; color: #888; margin-top: 10px; }
+    .auth-footer-link span { color: #0091EA; font-weight: 700; cursor: pointer; }
+
+    /* Custom Exit Modal Dialog */
+    #app-exit-dialog {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.78);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 100000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        animation: fadeIn 0.25s ease-out;
+    }
+    #app-exit-dialog.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .exit-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 340px;
+        border-radius: 24px;
+        padding: 26px 20px 22px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        position: relative;
+        overflow: hidden;
+        animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes slideUp { from { transform: translateY(30px) scale(0.92); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+    .exit-modal-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 6px;
+        background: linear-gradient(90deg, #ff416c, #8a2387, #e2136e);
+    }
+
+    .exit-logo-wrapper {
+        position: relative;
+        width: 86px;
+        height: 86px;
+        margin: 0 auto 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .exit-logo-pulse {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: rgba(226, 19, 110, 0.15);
+        animation: pulseRing 1.8s infinite;
+    }
+    @keyframes pulseRing {
+        0% { transform: scale(0.85); opacity: 0.8; }
+        50% { transform: scale(1.15); opacity: 0.3; }
+        100% { transform: scale(0.85); opacity: 0.8; }
+    }
+    .exit-app-img {
+        position: relative;
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        object-fit: cover;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+        border: 2.5px solid #fff;
+        z-index: 2;
+    }
+    .exit-badge-icon {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 28px;
+        height: 28px;
+        background: #ff4757;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        border: 2px solid white;
+        z-index: 3;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .exit-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: #1d1b20;
+        margin-bottom: 6px;
+    }
+    .exit-subtitle {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.5;
+        margin-bottom: 22px;
+        padding: 0 10px;
+    }
+
+    .exit-buttons-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .exit-btn-close {
+        background: #f1f2f6;
+        color: #475569;
+        border: 1.5px solid #e2e8f0;
+        padding: 13px 16px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    .exit-btn-close:active {
+        background: #e2e8f0;
+        transform: scale(0.97);
+    }
+    .exit-btn-exit {
+        background: linear-gradient(135deg, #ff4757, #ff6b81);
+        color: #ffffff;
+        border: none;
+        padding: 13px 16px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(255, 71, 87, 0.4);
+        transition: all 0.2s;
+    }
+    .exit-btn-exit:active {
+        transform: scale(0.97);
+        box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+    }
+
+    /* Subtle Floating Toast for Back Press */
+    #back-toast-pill {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: rgba(20, 20, 20, 0.92);
+        color: #ffffff;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+        z-index: 99999;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.25s ease-out;
+    }
+    #back-toast-pill.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    .app-section { display: none; background: var(--bg-color); min-height: 100vh; }
+    .app-section.active { display: block; }
+    body.sub-page { padding-bottom: 0; }
+
+    .home-content-wrapper { padding: 15px; }
+    .hero-banner { overflow: hidden; background: #fff; position: relative; }
+    .slider-container { width: 100%; padding-bottom: 56.25%; position: relative; overflow: hidden; background: #eee; }
+    .slider-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; transition: transform 0.5s ease-in-out; }
+    .slide { min-width: 100%; height: 100%; flex-shrink: 0; cursor: pointer; }
+    .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .slider-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0; background: #fff; border-bottom: 1px solid #eee; }
+    .dot { width: 8px; height: 8px; background: #ddd; border-radius: 50%; transition: all 0.3s; }
+    .dot.active { background: var(--secondary); width: 20px; border-radius: 10px; }
+
+    .marquee-container { width: 95%; margin: 20px auto; overflow: hidden; position: relative; background: #ffffff; border-radius: 12px; border: 1px solid #ccc; padding: 12px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .marquee-content { display: flex; white-space: nowrap; animation: scroll-left 30s linear infinite; width: max-content; }
+    .marquee-content span { font-size: 14px; font-weight: 600; color: #000; padding-right: 80px; text-transform: uppercase; }
+    @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    .category-title { font-weight: 900; font-size: 18px; margin: 15px 0 20px; text-transform: uppercase; text-align: center; color: #333; }
+    .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 5px; }
+    .cat-card-new { background: #EEEEEE; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid #546E7A; display: flex; flex-direction: column; }
+    .cat-card-img { width: 100%; height: 110px; object-fit: cover; background: white; border-bottom: 1px solid #ddd; }
+    .cat-card-info { padding: 10px; background: #EEEEEE; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .cat-card-title { font-weight: 900; font-size: 15px; color: #000; text-transform: uppercase; }
+    .cat-card-count { font-size: 12px; color: #777; font-weight: 600; }
+
+    .profile-header-bg { background: linear-gradient(135deg, var(--primary), #42a5f5); padding: 40px 20px 30px; text-align: center; color: white; border-radius: 0 0 20px 20px; }
+    .profile-avatar-box img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.8); }
+
+    .menu-list { background: white; border-radius: 8px; border: 1px solid #eee; margin-top: 15px; }
+    .menu-item { padding: 15px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #eee; cursor: pointer; color: #333; font-weight: 600; }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item img { width: 20px; }
+
+    .match-card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; border: 1px solid #ddd; cursor: pointer; }
+    .mc-header { display: flex; padding: 10px; gap: 10px; align-items: flex-start; }
+    .mc-thumb { width: 90px; height: 55px; border-radius: 5px; object-fit: cover; }
+    .mc-header-info { flex: 1; }
+    .mc-title-row { font-size: 15px; font-weight: 800; color: #333; margin-bottom: 2px; }
+    .mc-date-row { font-size: 11px; color: #D32F2F; font-weight: 600; }
+    .mc-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; padding: 5px 10px 15px; gap: 10px 0; }
+    .mc-stat-label { font-size: 10px; color: #888; font-weight: 700; text-transform: uppercase; }
+    .mc-stat-value { font-size: 13px; font-weight: 900; color: #000; margin-top: 2px; }
+    .mc-join-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px 15px; }
+    .mc-progress-wrapper { flex: 1; margin-right: 15px; }
+    .mc-prog-bar { height: 8px; background: #E0E0E0; border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+    .mc-prog-fill { height: 100%; background: linear-gradient(90deg, #66BB6A, #43A047); border-radius: 4px; }
+    .mc-spots-info { display: flex; justify-content: space-between; font-size: 11px; color: #666; font-weight: 600; }
+    .btn-join-main { border: 1px solid var(--primary); color: var(--primary); background: white; padding: 6px 25px; border-radius: 4px; font-size: 14px; font-weight: 800; cursor: pointer; height: 32px; display: flex; align-items: center; justify-content: center; }
+    .btn-join-main.disabled { background: #eee; color: #888; border-color: #ddd; pointer-events: none; }
+    .mc-details-row { display: flex; justify-content: space-between; padding: 0 10px 15px; gap: 10px; }
+    .btn-details { border: 1px solid #1565C0; color: #1565C0; background: white; padding: 8px 10px; border-radius: 4px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; cursor: pointer; flex: 1; justify-content: center; }
+    .mc-footer-timer { background: #388E3C; color: white; text-align: center; padding: 8px; font-size: 14px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; }
+
+    .wallet-redesign-container { background: #1e1e1e; min-height: 100vh; color: white; padding-bottom: 50px; }
+    .wallet-gradient-card { background: var(--wallet-gradient); margin: 15px; border-radius: 15px; padding: 20px; position: relative; color: white; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .wg-header { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; margin-bottom: 30px; }
+    .wg-balance { font-size: 38px; font-weight: 700; margin-top: 5px; display: flex; align-items: center; gap: 5px; }
+    .wallet-stats-white-card { background: white; margin: 0 15px; border-radius: 20px; padding: 20px 10px; display: flex; justify-content: space-around; color: #333; }
+    .ws-item { text-align: center; flex: 1; }
+    .ws-item:first-child { border-right: 1px solid #eee; }
+    .ws-amount { font-size: 22px; font-weight: 900; color: #333; }
+    .wallet-action-row { display: flex; gap: 15px; padding: 20px 15px; }
+    .wa-btn { flex: 1; padding: 15px; border-radius: 12px; border: none; color: white; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+    .wa-btn.add { background: #5a4bda; }
+    .wa-btn.withdraw { background: #00c853; }
+
+    .back-nav { padding: 15px; color: #000; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; background: white; border-bottom: 1px solid #eee; font-size: 16px; width: 100%; position: sticky; top: 0; z-index: 100; }
+    .back-nav.dark-mode { background: #000000; color: white; border-bottom: 1px solid #333; }
+    .hidden { display: none !important; }
+
+    .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: white; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; border-top: 1px solid #f0f0f0; }
+    .tab-item { display: flex; flex-direction: column; align-items: center; width: 20%; color: #000; cursor: pointer; }
+    .tab-icon-box { display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
+    .tab-item img { width: 24px; height: 24px; }
+    .tab-item span { font-size: 10px; margin-top: 2px; font-weight: 600; color: #555; }
+    .tab-item.active span { font-weight: 900; color: #000; }
+    .tab-item.active .tab-icon-box { background-color: var(--primary-light); width: 60px; height: 32px; border-radius: 16px; }
+
+    .fab-telegram { position: fixed; bottom: 80px; right: 20px; width: 50px; height: 50px; border-radius: 50%; z-index: 999; cursor: pointer; background: var(--primary-light); padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .fab-telegram img { width: 100%; height: 100%; }
+
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; display: none; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-box { background: white; width: 90%; max-width: 350px; border-radius: 12px; overflow: hidden; }
+    .popup-header-yellow { background: #FFD54F; padding: 15px; text-align: center; position: relative; }
+    .popup-title { font-weight: 900; font-size: 18px; color: #000; text-transform: uppercase; }
+    .popup-close-btn { position: absolute; top: 10px; right: 15px; font-weight: bold; color: #555; cursor: pointer; }
+    .popup-content { padding: 20px; background: white; text-align: center; }
+
+    .empty-msg { text-align: center; padding: 30px; color: #999; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="app-splash">
+    <div class="firefly-container">
+        <div class="firefly" style="--color: #ff0000; --left: 10%; --time: 6s; --delay: 0s;"></div>
+        <div class="firefly" style="--color: #00ff00; --left: 30%; --time: 8s; --delay: 1s;"></div>
+        <div class="firefly" style="--color: #0000ff; --left: 50%; --time: 7s; --delay: 2s;"></div>
+    </div>
+    <div class="animated-logo-box">
+        <div class="logo-inner">
+            <img id="splash-logo" src="app_logo.png" alt="Logo">
+        </div>
+    </div>
+    <div class="splash-app-name" id="splash-app-name">ESP TOUR</div>
+    <div class="splash-version">2.0</div>
+    <div class="splash-bottom-area">
+        <div class="splash-welcome">Welcome back! - Esp Tournament</div>
+        <div class="splash-line"></div>
+        <div class="splash-dots-container">
+            <div class="splash-dot"></div>
+            <div class="splash-dot"></div>
+            <div class="splash-dot"></div>
+        </div>
+    </div>
+</div>
+
+<div id="global-loader">
+    <div class="spinner"></div>
+</div>
+
+<div class="fab-telegram" onclick="window.openSupport()">
+    <img src="https://img.icons8.com/?size=100&id=yjJvTQzQoKEy&format=png&color=000000" alt="Support">
+</div>
+
+<!-- AUTH VIEW -->
+<div id="auth-view">
+    <div id="login-container" style="width:100%; height:100%; display:flex; flex-direction:column;">
+        <div class="auth-top-section">
+            <img class="app-official-logo" src="app_logo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 20px; margin-bottom: 12px; border: 2px solid rgba(255,215,0,0.4); object-fit: cover; box-shadow: 0 6px 16px rgba(0,0,0,0.4);">
+            <div class="auth-title-large">Welcome Back - লগইন করুন</div>
+            <div class="auth-subtitle">Sign in to your account</div>
+        </div>
+        <div class="auth-bottom-card">
+            <div class="auth-card-title">Log-In</div>
+            <div class="auth-input-group">
+                 <input type="email" id="login-email" class="auth-input-field" placeholder="Email Address" oninput="window.clearFieldError('login-email')">
+                 <div id="login-email-error" class="auth-field-error-msg"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+            </div>
+            <div class="auth-input-group">
+                 <input type="password" id="login-pass" class="auth-input-field" placeholder="Password" oninput="window.clearFieldError('login-pass')">
+                 <i class="fas fa-eye-slash auth-password-eye"></i>
+                 <div id="login-pass-error" class="auth-field-error-msg"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+            </div>
+            <button class="auth-black-btn" onclick="window.emailLogin()">Log-In</button>
+            <div class="auth-divider">— OR —</div>
+            <button class="auth-google-btn" onclick="window.googleLogin()">
+                <img src="https://img.icons8.com/?size=100&id=17949&format=png&color=000000" alt="Google">
+                Log-In with Google
+            </button>
+            <div class="auth-footer-link">
+                 Im a new user <span onclick="window.toggleAuthMode('register')">Register Now</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="register-container" style="width:100%; height:100%; display:none; flex-direction:column;">
+        <div class="auth-top-section">
+            <img class="app-official-logo" src="app_logo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 20px; margin-bottom: 12px; border: 2px solid rgba(255,215,0,0.4); object-fit: cover; box-shadow: 0 6px 16px rgba(0,0,0,0.4);">
+            <div class="auth-title-large">Let's Start</div>
+            <div class="auth-subtitle">Create an account</div>
+        </div>
+        <div class="auth-bottom-card">
+            <div class="auth-card-title">Sign Up</div> 
+            <div class="auth-input-group">
+                 <input type="text" id="reg-username" class="auth-input-field" placeholder="UserName" oninput="window.clearFieldError('reg-username')">
+                 <div id="reg-username-error" class="auth-field-error-msg"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+            </div>
+            <div class="auth-input-group">
+                 <input type="email" id="reg-email" class="auth-input-field" placeholder="Email Address" oninput="window.clearFieldError('reg-email')">
+                 <div id="reg-email-error" class="auth-field-error-msg"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+            </div>
+            <div class="auth-input-group">
+                 <input type="number" id="reg-phone" class="auth-input-field" placeholder="Mobile Number" oninput="window.clearFieldError('reg-phone')">
+                 <div id="reg-phone-error" class="auth-field-error-msg"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+            </div>
+            <div class="auth-input-group">
+                 <input type="password" id="reg-pass" class="auth-input-field" placeholder="Password" oninput="window.clearFieldError('reg-pass')">
+                 <i class="fas fa-eye-slash auth-password-eye"></i>
+                 <div id="reg-pass-error" class="auth-field-error-msg"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+            </div>
+            <button class="auth-black-btn" onclick="window.emailRegister()">SIGN UP</button> 
+            <div class="auth-divider">— OR —</div>
+            <button class="auth-google-btn" onclick="window.googleRegister()">
+                <img src="https://img.icons8.com/?size=100&id=17949&format=png&color=000000" alt="Google">
+                Sign Up with Google
+            </button>
+            <div class="auth-footer-link">
+                 Already have an account <span onclick="window.toggleAuthMode('login')">Sign in here</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main id="main-content" style="display:none;">
+    
+    <!-- SHOP PAGE -->
+    <section id="tab-shop-view" class="app-section">
+         <div style="padding: 20px; text-align: center;">
+             <div onclick="window.openShopLink()" style="cursor:pointer;">
+                 <img src="https://i.ibb.co/vvCr3fJc/5de3debc-c477-436c-8b60-e758062e53b7.jpg" style="width:100%; max-width:400px; border-radius:12px;">
+             </div>
+             <div style="font-weight:700; margin-top:15px;">১০০% বিশ্বাসের সাথে ডায়মন্ড টপআপ করতে ক্লিক করুন ☝️</div>
+         </div>
+    </section>
+
+    <!-- HOME PAGE -->
+    <section id="tab-home-view" class="app-section active">
+        <div class="hero-banner">
+            <div class="slider-container" id="slider-touch-area">
+                <div id="banner-slider-wrapper" class="slider-wrapper"></div>
+            </div>
+            <div id="slider-dots" class="slider-dots"></div>
+        </div>
+
+        <div class="home-content-wrapper">
+            <div class="marquee-container">
+                <div class="marquee-content">
+                    <span id="dynamic-notice">Welcome to Esp Samim Tour! Join matches and win big prizes.</span>
+                </div>
+            </div>
+            <div class="category-title">official | Esp Tournament</div>
+            <div id="dynamic-category-list" class="category-grid"></div>
+        </div>
+    </section>
+
+    <section id="tab-mymatches-view" class="app-section">
+        <h2 style="margin-bottom:15px; font-weight:900; color:#333; padding:15px;">My Matches</h2>
+        <div id="mymatches-container" style="padding:0;"></div>
+    </section>
+
+    <section id="tab-result-view" class="app-section">
+        <h2 style="margin-bottom:15px; font-weight:900; color:#333; padding:15px;">Match Results</h2>
+        <div id="result-container" style="padding:0 15px;"></div>
+    </section>
+
+    <section id="tab-profile-view" class="app-section" style="padding:0;">
+        <div class="profile-header-bg">
+            <div class="profile-avatar-box">
+                <img id="profile-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+            </div>
+            <h3 id="profile-name" style="margin-top:5px; font-weight:800;">Guest User</h3>
+            <p id="profile-email" style="opacity:0.9; font-size:13px; margin-bottom:15px;">Please login to continue</p>
+            <div style="display:flex; justify-content:center; gap:30px;">
+                <div>
+                    <div style="font-size:12px; opacity:0.8;">Deposit</div>
+                    <div style="font-weight:bold; font-size:18px;">৳ <span id="profile-bal-dep">0</span></div>
+                </div>
+                <div>
+                    <div style="font-size:12px; opacity:0.8;">Winnings</div>
+                    <div style="font-weight:bold; font-size:18px;">৳ <span id="profile-bal-win">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding: 20px;">
+            <div class="menu-list">
+                <div class="menu-item" onclick="window.navigateSub('wallet')">
+                    <img src="https://img.icons8.com/?size=100&id=JeOIikeRv8rJ&format=png&color=000000">
+                    <span>My Wallet</span>
+                    <i class="fas fa-chevron-right" style="margin-left:auto; color:#ccc;"></i>
+                </div>
+                <div class="menu-item" onclick="window.navigateSub('developer')">
+                    <img src="https://img.icons8.com/?size=100&id=Aiy01hWHN0hk&format=png&color=000000">
+                    <span>Developer Profile</span>
+                    <i class="fas fa-chevron-right" style="margin-left:auto; color:#ccc;"></i>
+                </div>
+                <div class="menu-item" onclick="window.handleLogout()">
+                    <i class="fas fa-sign-out-alt" style="color:var(--danger); width:20px;"></i>
+                    <span style="color:var(--danger);">Logout</span>
+                </div>
+            </div>
+            <div style="text-align:center; margin-top:20px; color:#ccc; font-size:12px;">App Version 2.0.0</div>
+        </div>
+    </section>
+
+    <section id="matches-view" class="app-section">
+        <div class="back-nav" onclick="window.showTab('home')">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </div>
+        <div id="matches-container" style="padding:15px;"></div>
+    </section>
+
+    <!-- DEVELOPER PAGE -->
+    <section id="developer-view" class="app-section" style="background: #fff;">
+        <div class="back-nav" onclick="window.showTab('profile')">
+            <i class="fas fa-arrow-left"></i> Developer Profile
+        </div>
+        <div style="padding: 25px;">
+            <div style="font-size: 20px; font-weight: 800; margin-bottom: 15px;">ESP Tournament Developer</div>
+            <p style="color:#555; line-height:1.6; margin-bottom:20px;">
+                আমরা তৈরি করে দিচ্ছি আপনার নিজস্ব Android Tournament App এবং Website Tournament System।
+            </p>
+            <div style="margin-bottom:20px;">
+                <div><i class="fas fa-check" style="color:green;"></i> Automatic Payment System</div>
+                <div><i class="fas fa-check" style="color:green;"></i> Admin System</div>
+                <div><i class="fas fa-check" style="color:green;"></i> Moderator Panel</div>
+            </div>
+            <a href="https://t.me/samimdeveloper" target="_blank" style="color:var(--primary); font-weight:bold;">Contact on Telegram</a>
+        </div>
+    </section>
+
+    <!-- WALLET VIEW -->
+    <section id="wallet-view" class="app-section">
+        <div class="wallet-redesign-container">
+            <div class="back-nav dark-mode" onclick="window.showTab('profile')">
+                <i class="fas fa-arrow-left"></i> My Wallet
+            </div>
+            <div class="wallet-gradient-card">
+                <div class="wg-header">
+                    <i class="fas fa-credit-card"></i> Esp Tournament WALLET
+                </div>
+                <div style="font-size:13px;">Available Balance</div>
+                <div class="wg-balance">৳ <span id="wallet-balance-display">0</span></div>
+            </div>
+            <div class="wallet-stats-white-card">
+                <div class="ws-item">
+                    <div style="font-size:12px; color:#5a3be2; font-weight:bold;">DEPOSITED</div>
+                    <div class="ws-amount">৳ <span id="deposit-available-wallet">0</span></div>
+                </div>
+                <div class="ws-item">
+                    <div style="font-size:12px; color:#5a3be2; font-weight:bold;">WINNING</div>
+                    <div class="ws-amount">৳ <span id="withdraw-available-wallet">0</span></div>
+                </div>
+            </div>
+            <div class="wallet-action-row">
+                <button class="wa-btn add" onclick="window.navigateSub('add-money')"><i class="fas fa-plus-circle"></i> Add Money</button>
+                <button class="wa-btn withdraw" onclick="window.navigateSub('withdraw')"><i class="fas fa-money-bill-wave"></i> Withdraw</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="add-money-view" class="app-section">
+        <div class="back-nav" onclick="window.navigateSub('wallet')"><i class="fas fa-arrow-left"></i> Add Money</div>
+        <div style="padding:20px;">
+            <div style="margin-bottom:15px;">
+                <label>Transaction ID (TrxID)</label>
+                <input type="text" id="trx-bkash" style="width:100%; padding:12px; margin-top:5px; border:1px solid #ccc; border-radius:6px;" placeholder="Enter TrxID">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label>Amount (BDT)</label>
+                <input type="number" id="amt-bkash" style="width:100%; padding:12px; margin-top:5px; border:1px solid #ccc; border-radius:6px;" placeholder="Enter Amount">
+            </div>
+            <button onclick="window.triggerVerify()" style="width:100%; padding:15px; background:var(--primary); color:white; font-weight:bold; border:none; border-radius:8px;">Submit Add Money</button>
+        </div>
+    </section>
+
+    <section id="withdraw-view" class="app-section">
+        <div class="back-nav dark-mode" onclick="window.navigateSub('wallet')"><i class="fas fa-arrow-left"></i> Withdraw Money</div>
+        <div style="padding:20px; color:white;">
+            <div style="margin-bottom:15px;">
+                <label>Number</label>
+                <input type="number" id="withdraw-number" style="width:100%; padding:12px; margin-top:5px; border:1px solid #ccc; border-radius:6px; color:#000;" placeholder="017...">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label>Amount</label>
+                <input type="number" id="withdraw-amount" style="width:100%; padding:12px; margin-top:5px; border:1px solid #ccc; border-radius:6px; color:#000;" placeholder="Min 100 TK">
+            </div>
+            <input type="hidden" id="withdraw-method" value="bKash">
+            <button onclick="window.submitWithdraw()" style="width:100%; padding:15px; background:#00c853; color:white; font-weight:bold; border:none; border-radius:8px;">Submit Withdraw</button>
+        </div>
+    </section>
+
+</main>
+
+<div class="tab-bar hidden">
+    <div class="tab-item" onclick="window.showTab('shop')" id="nav-shop">
+        <div class="tab-icon-box"><img src="https://img.icons8.com/?size=100&id=x5pyLTwajYMT&format=png&color=000000"></div>
+        <span>Shop</span>
+    </div>
+    <div class="tab-item active" onclick="window.showTab('home')" id="nav-home">
+        <div class="tab-icon-box"><img src="https://img.icons8.com/?size=100&id=cdTzm4ndoVu4&format=png&color=000000"></div>
+        <span>Play</span>
+    </div>
+    <div class="tab-item" onclick="window.showTab('mymatches')" id="nav-mymatches">
+        <div class="tab-icon-box"><img src="https://img.icons8.com/?size=100&id=qbPAZjbNRPIS&format=png&color=000000"></div>
+        <span>Matches</span>
+    </div>
+    <div class="tab-item" onclick="window.showTab('result')" id="nav-result">
+        <div class="tab-icon-box"><img src="https://img.icons8.com/?size=100&id=MyHVj8kpSfdv&format=png&color=000000"></div>
+        <span>Result</span>
+    </div>
+    <div class="tab-item" onclick="window.showTab('profile')" id="nav-profile">
+        <div class="tab-icon-box"><img src="https://img.icons8.com/?size=100&id=xyyjPRvu3CUP&format=png&color=000000"></div>
+        <span>Profile</span>
+    </div>
+</div>
+
+<!-- Custom Exit Confirmation Dialog with Logo & Stylized Card -->
+<div id="app-exit-dialog">
+    <div class="exit-modal-card">
+        <div class="exit-logo-wrapper">
+            <div class="exit-logo-pulse"></div>
+            <img class="exit-app-img app-official-logo" src="app_logo.png" alt="App Logo">
+            <div class="exit-badge-icon"><i class="fas fa-power-off"></i></div>
+        </div>
+        <div class="exit-title">অ্যাপ থেকে বের হতে চান?</div>
+        <div class="exit-subtitle">আপনি কি সত্যি ESP TOUR 2.0 অ্যাপটি বন্ধ করতে চান?</div>
+        <div class="exit-buttons-grid">
+            <button class="exit-btn-close" onclick="window.closeExitDialog()">
+                <i class="fas fa-times"></i> বাতিল
+            </button>
+            <button class="exit-btn-exit" onclick="window.confirmExitApp()">
+                <i class="fas fa-sign-out-alt"></i> বাহির হন
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating toast for Android back button count notification -->
+<div id="back-toast-pill">
+    <i class="fas fa-info-circle" style="color: #ff9800;"></i>
+    <span id="back-toast-text">অ্যাপ থেকে বের হতে আরও ২ বার চাপুন</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyA3B7DZ_JeY-a33zdixKmZ6oQrU2iEVsEk",
+        authDomain: "samim-firebase.firebaseapp.com",
+        databaseURL: "https://samim-firebase-default-rtdb.firebaseio.com",
+        projectId: "samim-firebase",
+        storageBucket: "samim-firebase.firebasestorage.app",
+        messagingSenderId: "521003542655",
+        appId: "1:521003542655:web:bbabcf2f24a0eaeeef774a",
+        measurementId: "G-SPBMDSXJVX"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const googleProvider = new firebase.auth.GoogleAuthProvider();
+    // Force Google Account Selector to show all device accounts
+    googleProvider.setCustomParameters({
+        prompt: 'select_account'
+    });
+
+    let currentUser = null;
+    let depositBal = 0, winningBal = 0;
+    let activeCategories = {};
+    let rawMatches = [];
+    let currentActiveCategory = null;
+    let currentAppLogo = "app_logo.png";
+
+    // --- Navigation History Stack & Back Navigation ---
+    let currentTab = 'home';
+    let currentSubView = null;
+    const navStack = [];
+    let backPressCount = 0;
+    let backPressTimer = null;
+
+    window.showExitDialog = function() {
+        const dialog = document.getElementById('app-exit-dialog');
+        if (dialog) dialog.classList.add('active');
+    };
+
+    window.closeExitDialog = function() {
+        const dialog = document.getElementById('app-exit-dialog');
+        if (dialog) dialog.classList.remove('active');
+        backPressCount = 0;
+    };
+
+    window.confirmExitApp = function() {
+        if (window.AndroidBridge && window.AndroidBridge.exitApp) {
+            window.AndroidBridge.exitApp();
+        } else {
+            window.close();
+        }
+    };
+
+    function showBackNotification(remainingPresses) {
+        const msg = `অ্যাপ থেকে বের হতে আরও ${remainingPresses} বার ব্যাক বাটনে চাপুন`;
+        if (window.AndroidBridge && window.AndroidBridge.showToast) {
+            window.AndroidBridge.showToast(msg);
+        }
+        const toast = document.getElementById('back-toast-pill');
+        const text = document.getElementById('back-toast-text');
+        if (toast && text) {
+            text.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+    }
+
+    // Android Hardware / Gesture Back Button Handler
+    window.handleAndroidBackButton = function() {
+        // 1. If Exit Dialog is open -> close it
+        const exitDialog = document.getElementById('app-exit-dialog');
+        if (exitDialog && exitDialog.classList.contains('active')) {
+            window.closeExitDialog();
+            return "true";
+        }
+
+        // 2. If SweetAlert is open -> close it
+        if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) {
+            Swal.close();
+            return "true";
+        }
+
+        // 3. If in Register view -> return to Login
+        const regContainer = document.getElementById('register-container');
+        if (regContainer && regContainer.style.display === 'flex') {
+            window.toggleAuthMode('login');
+            return "true";
+        }
+
+        // 4. Reverse navigation via history stack
+        if (navStack.length > 0) {
+            const prevState = navStack.pop();
+            backPressCount = 0;
+            if (prevState.subView) {
+                if (prevState.subView === 'matches') {
+                    window.openCategory(currentActiveCategory || '', false);
+                } else {
+                    window.navigateSub(prevState.subView, false);
+                }
+            } else {
+                window.showTab(prevState.tab || 'home', false);
+            }
+            return "true";
+        }
+
+        // 5. If in a tab other than Home -> go back to Home first
+        if (currentUser && currentTab !== 'home') {
+            window.showTab('home', false);
+            backPressCount = 0;
+            return "true";
+        }
+
+        // 6. At root screen (Home tab or Login screen with empty history) -> Triple Back Press detection
+        backPressCount++;
+        if (backPressCount >= 3) {
+            backPressCount = 0;
+            if (backPressTimer) clearTimeout(backPressTimer);
+            window.showExitDialog();
+            return "true";
+        } else {
+            showBackNotification(3 - backPressCount);
+            if (backPressTimer) clearTimeout(backPressTimer);
+            backPressTimer = setTimeout(() => {
+                backPressCount = 0;
+            }, 3500);
+            return "true";
+        }
+    };
+
+    // --- Field Validation & Error Helpers ---
+    window.setFieldError = function(fieldId, errorMsg) {
+        const inputEl = document.getElementById(fieldId);
+        const errEl = document.getElementById(fieldId + '-error');
+        if (inputEl) {
+            inputEl.classList.add('input-error');
+            inputEl.focus();
+        }
+        if (errEl) {
+            const span = errEl.querySelector('span');
+            if (span) span.innerText = errorMsg;
+            errEl.classList.add('show');
+        }
+    };
+
+    window.clearFieldError = function(fieldId) {
+        const inputEl = document.getElementById(fieldId);
+        const errEl = document.getElementById(fieldId + '-error');
+        if (inputEl) inputEl.classList.remove('input-error');
+        if (errEl) errEl.classList.remove('show');
+    };
+
+    window.clearAllErrors = function() {
+        ['login-email', 'login-pass', 'reg-username', 'reg-email', 'reg-phone', 'reg-pass'].forEach(id => {
+            window.clearFieldError(id);
+        });
+    };
+
+    function getAppDeviceInfo() {
+        if (window.AndroidBridge && window.AndroidBridge.getDeviceInfo) {
+            try {
+                return window.AndroidBridge.getDeviceInfo();
+            } catch(e) {}
+        }
+        return navigator.userAgent.indexOf("Android") !== -1 ? "Android Device" : "Mobile / Web Client";
+    }
+
+    function setCurrentUserSession(u) {
+        currentUser = u;
+        localStorage.setItem('esp_saved_user', JSON.stringify(u));
+        document.getElementById('auth-view').classList.remove('active');
+        document.getElementById('main-content').style.display = 'block';
+        document.querySelector('.tab-bar').classList.remove('hidden');
+        document.getElementById('profile-name').innerText = u.displayName || 'User';
+        document.getElementById('profile-email').innerText = u.email || '';
+
+        db.ref('users/' + u.uid).on('value', s => {
+            const d = s.val();
+            if(d) {
+                depositBal = d.deposit || 0;
+                winningBal = d.winning || 0;
+                document.getElementById('profile-bal-dep').innerText = depositBal;
+                document.getElementById('profile-bal-win').innerText = winningBal;
+                document.getElementById('wallet-balance-display').innerText = (depositBal + winningBal);
+                document.getElementById('deposit-available-wallet').innerText = depositBal;
+                document.getElementById('withdraw-available-wallet').innerText = winningBal;
+            }
+        });
+
+        // Listen for specific user push notifications sent by Admin
+        db.ref('user_notifications/' + u.uid).limitToLast(1).on('child_added', snap => {
+            const notif = snap.val();
+            if (notif && notif.timestamp && (Date.now() - notif.timestamp < 30000)) {
+                if (window.AndroidBridge && window.AndroidBridge.showNativeNotification) {
+                    window.AndroidBridge.showNativeNotification(notif.title || 'ESP Tour', notif.desc || '');
+                }
+            }
+        });
+
+        window.showTab('home');
+    }
+
+    window.emailLogin = function() {
+        window.clearAllErrors();
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-pass').value.trim();
+
+        if (!email && !password) {
+            window.setFieldError('login-email', 'আপনার জিমেইলটি দিন');
+            window.setFieldError('login-pass', 'আপনার পাসওয়ার্ডটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'তথ্য দিন!',
+                text: 'অনুগ্রহ করে আপনার জিমেইল এবং পাসওয়ার্ড দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+        if (!email) {
+            window.setFieldError('login-email', 'আপনার জিমেইলটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'জিমেইল দিন!',
+                text: 'অনুগ্রহ করে আপনার জিমেইলটি দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+        if (!password) {
+            window.setFieldError('login-pass', 'আপনার পাসওয়ার্ডটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'পাসওয়ার্ড দিন!',
+                text: 'অনুগ্রহ করে আপনার পাসওয়ার্ডটি দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+
+        const loader = document.getElementById('global-loader');
+        if (loader) loader.classList.add('active');
+
+        auth.signInWithEmailAndPassword(email, password).then(res => {
+            if (loader) loader.classList.remove('active');
+            window.clearAllErrors();
+            const u = res.user;
+            const deviceInfo = getAppDeviceInfo();
+            db.ref('users/' + u.uid).update({
+                device_name: deviceInfo,
+                last_login: new Date().toLocaleString()
+            });
+            setCurrentUserSession({
+                uid: u.uid,
+                email: u.email,
+                displayName: u.displayName || u.email.split('@')[0]
+            });
+            Swal.fire({
+                icon: 'success',
+                title: 'লগইন সফল!',
+                text: 'স্বাগতম ESP TOUR 2.0-এ!',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }).catch(err => {
+            if (loader) loader.classList.remove('active');
+            let errorMsg = 'জিমেইল অথবা পাসওয়ার্ড ভুল হয়েছে!';
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+                errorMsg = 'এই জিমেইল দিয়ে কোনো একাউন্ট নেই! সঠিক জিমেইল দিন অথবা সাইন আপ করুন।';
+                window.setFieldError('login-email', 'সঠিক জিমেইলটি দিন');
+            } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                errorMsg = 'পাসওয়ার্ড ভুল হয়েছে! সঠিক পাসওয়ার্ড দিন।';
+                window.setFieldError('login-pass', 'ভুল পাসওয়ার্ড, সঠিক পাসওয়ার্ড দিন');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'ভুল হয়েছে!',
+                text: errorMsg,
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'আবার চেষ্টা করুন'
+            });
+        });
+    };
+
+    window.emailRegister = function() {
+        window.clearAllErrors();
+        const username = document.getElementById('reg-username').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const password = document.getElementById('reg-pass').value.trim();
+
+        if (!username) {
+            window.setFieldError('reg-username', 'আপনার নামটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'নাম দিন!',
+                text: 'অনুগ্রহ করে আপনার নামটি দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+        if (!email) {
+            window.setFieldError('reg-email', 'আপনার জিমেইলটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'জিমেইল দিন!',
+                text: 'অনুগ্রহ করে আপনার জিমেইলটি দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+        if (!phone) {
+            window.setFieldError('reg-phone', 'আপনার মোবাইল নম্বরটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'মোবাইল নম্বর দিন!',
+                text: 'অনুগ্রহ করে আপনার মোবাইল নম্বরটি দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+        if (!password) {
+            window.setFieldError('reg-pass', 'আপনার পাসওয়ার্ডটি দিন');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'পাসওয়ার্ড দিন!',
+                text: 'অনুগ্রহ করে আপনার পাসওয়ার্ডটি দিন',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+        if (password.length < 6) {
+            window.setFieldError('reg-pass', 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'পাসওয়ার্ড ছোট!',
+                text: 'পাসওয়ার্ড অবশ্যই কমপক্ষে ৬ সংখ্যার/অক্ষরের হতে হবে',
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        }
+
+        const loader = document.getElementById('global-loader');
+        if (loader) loader.classList.add('active');
+
+        // Create Firebase Auth User directly
+        auth.createUserWithEmailAndPassword(email, password).then(res => {
+            const u = res.user;
+            const deviceInfo = getAppDeviceInfo();
+            u.updateProfile({ displayName: username });
+            db.ref('users/' + u.uid).set({
+                username: username,
+                email: email,
+                phone: phone,
+                deposit: 0,
+                winning: 0,
+                uid: u.uid,
+                device_name: deviceInfo,
+                registered_at: new Date().toLocaleString(),
+                last_login: new Date().toLocaleString()
+            }).then(() => {
+                if (loader) loader.classList.remove('active');
+                window.clearAllErrors();
+                setCurrentUserSession({
+                    uid: u.uid,
+                    email: email,
+                    displayName: username
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'রেজিস্ট্রেশন সফল!',
+                    text: 'আপনার একাউন্ট সফলভাবে তৈরি হয়েছে!',
+                    imageUrl: currentAppLogo,
+                    imageWidth: 70,
+                    imageHeight: 70,
+                    confirmButtonText: 'ঠিক আছে'
+                });
+            }).catch(dbErr => {
+                if (loader) loader.classList.remove('active');
+                setCurrentUserSession({
+                    uid: u.uid,
+                    email: email,
+                    displayName: username
+                });
+            });
+        }).catch(err => {
+            if (loader) loader.classList.remove('active');
+            let errorMsg = err.message;
+            if (err.code === 'auth/email-already-in-use') {
+                errorMsg = 'এই জিমেইল দিয়ে ইতিমধ্যে আইডি খোলা আছে! অনুগ্রহ করে লগইন করুন।';
+                window.setFieldError('reg-email', 'এই জিমেইল দিয়ে আইডি খোলা আছে');
+            } else if (err.code === 'auth/invalid-email') {
+                errorMsg = 'অনুগ্রহ করে সঠিক জিমেইল অ্যাড্রেস লিখুন।';
+                window.setFieldError('reg-email', 'ভুল জিমেইল ফরম্যাট');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'রেজিস্ট্রেশন ব্যর্থ!',
+                text: errorMsg,
+                imageUrl: currentAppLogo,
+                imageWidth: 70,
+                imageHeight: 70,
+                confirmButtonText: 'ঠিক আছে'
+            });
+        });
+    };
+
+    window.googleLogin = function() {
+        if (window.AndroidBridge && window.AndroidBridge.signInWithGoogle) {
+            window.AndroidBridge.signInWithGoogle('login');
+        } else {
+            window.fallbackGoogleSignIn('login');
+        }
+    };
+
+    window.googleRegister = function() {
+        if (window.AndroidBridge && window.AndroidBridge.signInWithGoogle) {
+            window.AndroidBridge.signInWithGoogle('register');
+        } else {
+            window.fallbackGoogleSignIn('register');
+        }
+    };
+
+    window.onGoogleSignInCancelled = function() {
+        const loader = document.getElementById('global-loader');
+        if (loader) loader.classList.remove('active');
+    };
+
+    window.fallbackGoogleSignIn = function(mode) {
+        const loader = document.getElementById('global-loader');
+        if (loader) loader.classList.add('active');
+
+        googleProvider.setCustomParameters({ prompt: 'select_account' });
+        auth.signInWithPopup(googleProvider).then(res => {
+            if (loader) loader.classList.remove('active');
+            const u = res.user;
+            window.handleGoogleAccountSelected(u.email, mode);
+        }).catch(err => {
+            if (loader) loader.classList.remove('active');
+            if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'লগইন ব্যর্থ!',
+                    text: err.message || 'Google Sign-In সমস্যা হয়েছে',
+                    imageUrl: currentAppLogo,
+                    imageWidth: 70,
+                    imageHeight: 70,
+                    confirmButtonText: 'ঠিক আছে'
+                });
+            }
+        });
+    };
+
+    window.handleGoogleAccountSelected = function(selectedEmail, mode) {
+        if (!selectedEmail) return;
+        const loader = document.getElementById('global-loader');
+        if (loader) loader.classList.add('active');
+
+        const cleanEmail = selectedEmail.toLowerCase().trim();
+        const safeKey = "g_" + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
+        const defaultName = cleanEmail.split('@')[0];
+        const deviceInfo = getAppDeviceInfo();
+
+        db.ref('users/' + safeKey).once('value').then(snap => {
+            if (loader) loader.classList.remove('active');
+            if (snap.exists()) {
+                const userData = snap.val();
+                db.ref('users/' + safeKey).update({
+                    device_name: deviceInfo,
+                    last_login: new Date().toLocaleString()
+                });
+                setCurrentUserSession({
+                    uid: safeKey,
+                    email: cleanEmail,
+                    displayName: userData.username || defaultName
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'লগইন সফল!',
+                    text: 'স্বাগতম, ' + (userData.username || defaultName),
+                    imageUrl: currentAppLogo,
+                    imageWidth: 70,
+                    imageHeight: 70,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                const newUser = {
+                    username: defaultName,
+                    email: cleanEmail,
+                    phone: '',
+                    deposit: 0,
+                    winning: 0,
+                    uid: safeKey,
+                    device_name: deviceInfo,
+                    registered_at: new Date().toLocaleString(),
+                    last_login: new Date().toLocaleString()
+                };
+                db.ref('users/' + safeKey).set(newUser).then(() => {
+                    setCurrentUserSession({
+                        uid: safeKey,
+                        email: cleanEmail,
+                        displayName: defaultName
+                    });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'রেজিস্ট্রেশন সফল!',
+                        text: 'স্বাগতম ESP TOUR 2.0-এ!',
+                        imageUrl: currentAppLogo,
+                        imageWidth: 70,
+                        imageHeight: 70,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                });
+            }
+        }).catch(err => {
+            if (loader) loader.classList.remove('active');
+            const newUser = {
+                username: defaultName,
+                email: cleanEmail,
+                phone: '',
+                deposit: 0,
+                winning: 0,
+                uid: safeKey,
+                device_name: deviceInfo,
+                registered_at: new Date().toLocaleString(),
+                last_login: new Date().toLocaleString()
+            };
+            db.ref('users/' + safeKey).set(newUser).then(() => {
+                setCurrentUserSession({
+                    uid: safeKey,
+                    email: cleanEmail,
+                    displayName: defaultName
+                });
+            });
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.auth-password-eye').forEach(eye => {
+            eye.addEventListener('click', function() {
+                const input = this.previousElementSibling;
+                if (input && input.type === 'password') {
+                    input.type = 'text';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                } else if (input) {
+                    input.type = 'password';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                }
+            });
+        });
+    });
+
+    window.showTab = function(t, push = true) {
+        if (push && (currentSubView || currentTab !== t)) {
+            navStack.push({ tab: currentTab, subView: currentSubView });
+        }
+        currentTab = t;
+        currentSubView = null;
+        document.querySelectorAll('.tab-item').forEach(e => e.classList.remove('active'));
+        const navEl = document.getElementById(`nav-${t}`);
+        if(navEl) navEl.classList.add('active');
+        document.querySelectorAll('.app-section').forEach(e => e.classList.remove('active'));
+        const tabView = document.getElementById(`tab-${t}-view`);
+        if(tabView) tabView.classList.add('active');
+        document.body.classList.remove('sub-page');
+        document.querySelector('.tab-bar').classList.remove('hidden');
+    };
+
+    window.navigateSub = function(t, push = true) {
+        if (push) {
+            navStack.push({ tab: currentTab, subView: currentSubView });
+        }
+        currentSubView = t;
+        document.querySelectorAll('.app-section').forEach(e => e.classList.remove('active'));
+        document.body.classList.add('sub-page');
+        document.querySelector('.tab-bar').classList.add('hidden');
+        if (t === 'wallet') document.getElementById('wallet-view').classList.add('active');
+        else if (t === 'add-money') document.getElementById('add-money-view').classList.add('active');
+        else if (t === 'withdraw') document.getElementById('withdraw-view').classList.add('active');
+        else if (t === 'developer') document.getElementById('developer-view').classList.add('active');
+    };
+
+    window.openCategory = function(k, push = true) {
+        if (push) {
+            navStack.push({ tab: currentTab, subView: currentSubView });
+        }
+        currentActiveCategory = k;
+        currentSubView = 'matches';
+        document.querySelectorAll('.app-section').forEach(e => e.classList.remove('active'));
+        document.getElementById('matches-view').classList.add('active');
+        document.body.classList.add('sub-page');
+        document.querySelector('.tab-bar').classList.add('hidden');
+        loadCategoryMatches();
+    };
+
+    function loadCategoryMatches() {
+        const c = document.getElementById('matches-container');
+        c.innerHTML = "";
+        const matches = rawMatches.filter(m => m.categoryId === currentActiveCategory);
+        if(matches.length === 0) {
+            c.innerHTML = `<div class="empty-msg">No matches found</div>`;
+            return;
+        }
+        matches.forEach(m => {
+            c.innerHTML += `
+            <div class="match-card">
+                <div class="mc-header">
+                    <div class="mc-header-info">
+                        <div class="mc-title-row">${m.title}</div>
+                        <div class="mc-date-row">${m.time}</div>
+                    </div>
+                </div>
+                <div class="mc-stats-grid">
+                    <div class="mc-stat-box"><div class="mc-stat-label">WIN PRIZE</div><div class="mc-stat-value">৳${m.total_prize}</div></div>
+                    <div class="mc-stat-box"><div class="mc-stat-label">ENTRY FEE</div><div class="mc-stat-value">৳${m.entry}</div></div>
+                    <div class="mc-stat-box"><div class="mc-stat-label">TYPE</div><div class="mc-stat-value">${m.type}</div></div>
+                </div>
+            </div>`;
+        });
+    }
+
+    window.triggerVerify = function() {
+        const trx = document.getElementById('trx-bkash').value.trim();
+        const amt = parseFloat(document.getElementById('amt-bkash').value);
+        if(!trx || !amt) return Swal.fire('Error', 'সব ফিল্ড পূরণ করুন', 'error');
+
+        db.ref('deposit_requests').push({
+            uid: currentUser.uid,
+            trxId: trx,
+            amount: amt,
+            method: 'bKash',
+            status: 'Pending',
+            date: new Date().toLocaleString()
+        });
+        Swal.fire('Success', 'আবেদন জমা হয়েছে!', 'success').then(() => window.navigateSub('wallet'));
+    }
+
+    window.submitWithdraw = function() {
+        const num = document.getElementById('withdraw-number').value.trim();
+        const amt = parseFloat(document.getElementById('withdraw-amount').value);
+        if(!num || !amt) return Swal.fire('Error', 'তথ্য সঠিক দিন', 'error');
+        if(amt > winningBal) return Swal.fire('Error', 'পর্যাপ্ত ব্যালেন্স নেই', 'error');
+
+        db.ref('users/' + currentUser.uid).update({ winning: winningBal - amt });
+        db.ref('transactions/' + currentUser.uid).push({
+            type: 'Withdraw',
+            amount: amt,
+            number: num,
+            method: 'bKash',
+            status: 'Pending',
+            date: new Date().toLocaleString()
+        });
+        Swal.fire('Success', 'উইথড্র রিকোয়েস্ট জমা হয়েছে', 'success').then(() => window.navigateSub('wallet'));
+    }
+
+    window.handleLogout = function() { 
+        localStorage.removeItem('esp_saved_user');
+        currentUser = null;
+        auth.signOut().catch(() => {});
+        document.getElementById('main-content').style.display = 'none';
+        document.getElementById('auth-view').classList.add('active');
+        document.querySelector('.tab-bar').classList.add('hidden');
+    }
+    window.toggleAuthMode = function(m) {
+        document.getElementById('login-container').style.display = m === 'login' ? 'flex' : 'none';
+        document.getElementById('register-container').style.display = m === 'login' ? 'none' : 'flex';
+    }
+
+    // Initialize notification listener and permission
+    setTimeout(() => {
+        if (window.AndroidBridge && window.AndroidBridge.requestNotificationPermission) {
+            window.AndroidBridge.requestNotificationPermission();
+        }
+    }, 1200);
+
+    const appLoadTime = Date.now();
+    db.ref('notifications').limitToLast(1).on('child_added', snap => {
+        const notif = snap.val();
+        if (notif && notif.timestamp && (notif.timestamp >= appLoadTime - 5000)) {
+            if (window.AndroidBridge && window.AndroidBridge.showNativeNotification) {
+                window.AndroidBridge.showNativeNotification(notif.title || 'ESP Tour Notification', notif.desc || '');
+            }
+        }
+    });
+
+    auth.onAuthStateChanged(u => {
+        if (u) {
+            setCurrentUserSession({
+                uid: u.uid,
+                email: u.email,
+                displayName: u.displayName || (u.email ? u.email.split('@')[0] : 'User')
+            });
+        } else {
+            const savedUserStr = localStorage.getItem('esp_saved_user');
+            if (savedUserStr) {
+                try {
+                    const savedUser = JSON.parse(savedUserStr);
+                    if (savedUser && savedUser.uid) {
+                        setCurrentUserSession(savedUser);
+                        const splash = document.getElementById('app-splash');
+                        if(splash) splash.style.display = 'none';
+                        return;
+                    }
+                } catch(e) {}
+            }
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('auth-view').classList.add('active');
+        }
+        setTimeout(() => {
+            const splash = document.getElementById('app-splash');
+            if(splash) splash.style.display = 'none';
+        }, 1200);
+    });
+
+    db.ref('categories').on('value', s => {
+        const d = s.val();
+        if(d) {
+            activeCategories = d;
+            const c = document.getElementById('dynamic-category-list');
+            c.innerHTML = "";
+            Object.entries(d).forEach(([k, v]) => {
+                const catImg = v.img && v.img.trim() ? v.img : currentAppLogo;
+                c.innerHTML += `
+                <div class="cat-card-new" onclick="window.openCategory('${k}')">
+                    <img src="${catImg}" class="cat-card-img" onerror="this.src='${currentAppLogo}'">
+                    <div class="cat-card-info">
+                        <div class="cat-card-title">${v.name || 'Category'}</div>
+                    </div>
+                </div>`;
+            });
+        }
+    });
+
+    db.ref('matches').on('value', s => {
+        rawMatches = [];
+        const d = s.val();
+        if(d) Object.entries(d).forEach(([k,v]) => rawMatches.push({dbKey: k, ...v}));
+    });
+
+    db.ref('app_settings').on('value', s => {
+        const d = s.val();
+        if(d) {
+            if(d.app_name) document.getElementById('splash-app-name').innerText = d.app_name;
+            if(d.notice) document.getElementById('dynamic-notice').innerText = d.notice;
+            if(d.logo_url || d.logo) {
+                currentAppLogo = d.logo_url || d.logo;
+                const splashLogo = document.getElementById('splash-logo');
+                if(splashLogo) splashLogo.src = currentAppLogo;
+                document.querySelectorAll('.app-official-logo').forEach(img => img.src = currentAppLogo);
+            }
+        }
+    });
+</script>
+</body>
+</html>
