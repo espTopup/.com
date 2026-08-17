@@ -1053,22 +1053,106 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-    </style>
-    <style id="custom-package-card-style"></style>
-    <script>
-        (function() {
-            try {
-                if (localStorage.getItem('cached_loader_enabled') === 'false') {
-                    window.isLoaderEnabled = false;
-                    document.write('<style id="inline-loader-hide-style">#global-page-loader{display:none !important;opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}</style>');
-                }
-                const cachedPkgCss = localStorage.getItem('cached_package_box_css');
-                if (cachedPkgCss) {
-                    document.write('<style id="custom-package-card-style">' + cachedPkgCss + '</style>');
-                }
-            } catch(e) {}
-        })();
-    </script>
+ </style>
+
+<!-- ১. কাস্টম ডাউনলোড ব্যানার স্টাইল (CSS) -->
+<style>
+  .download-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #0d6efd;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    z-index: 99999;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .banner-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .download-btn {
+    background-color: #ff9800;
+    color: #ffffff !important;
+    padding: 6px 14px;
+    text-decoration: none !important;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13px;
+    transition: background-color 0.2s ease;
+    display: inline-block;
+  }
+
+  .download-btn:hover {
+    background-color: #e68a00;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+  }
+
+  .close-btn:hover {
+    opacity: 0.8;
+  }
+</style>
+
+<!-- ২. অ্যাপ ডাউনলোড ব্যানার (HTML) -->
+<div id="app-download-banner" class="download-banner">
+  <div class="banner-content">
+    <span class="banner-text">আমাদের Esp TopUp অ্যাপটি ডাউনলোড করুন!</span>
+    <a href="https://drive.google.com/uc?export=download&id=YOUR_FILE_ID_HERE" class="download-btn">ডাউনলোড</a>
+  </div>
+  <button type="button" class="close-btn" onclick="closeBanner()">&times;</button>
+</div>
+
+<!-- ৩. ক্যাশ লোডার ও কাস্টম প্যাকেজ স্টাইল -->
+<style id="custom-package-card-style"></style>
+
+<!-- ৪. ইনলাইন স্ক্রিপ্ট ও ব্যানার বন্ধ করার ফাংশন (JavaScript) -->
+<script>
+  // ব্যানার হাইড করার ফাংশন
+  function closeBanner() {
+    var banner = document.getElementById('app-download-banner');
+    if (banner) {
+      banner.style.display = 'none';
+    }
+  }
+
+  // আপনার অরিজিনাল ক্যাশ লোডার স্ক্রিপ্ট
+  (function() {
+    try {
+      if (localStorage.getItem('cached_loader_enabled') === 'false') {
+        window.isLoaderEnabled = false;
+        document.write('<style id="inline-loader-hide-style">#global-page-loader{display:none !important;opacity:0 !important;visibility:hidden !important;pointer-events:none !important;}</style>');
+      }
+      const cachedPkgCss = localStorage.getItem('cached_package_box_css');
+      if (cachedPkgCss) {
+        document.write('<style id="custom-package-card-style">' + cachedPkgCss + '</style>');
+      }
+    } catch(e) {}
+  })();
+</script>
 </head>
 <body class="select-none bg-slate-50 m-0 p-0">
 <div id="global-page-loader">
